@@ -24,20 +24,21 @@ public class TransactionService {
     @Autowired
     private TransactionRepository repository;
 
-    @Autowired //comunicaçoes http entre serviços (get, post,put)
+    @Autowired // Cliente HTTP responsável pela comunicação com APIs externas
     private RestTemplate restTemplate;
 
     @Autowired
     private NotificationService notificationService;
 
-    //pegar o user pra fazer a validação sobre ele
     public Transaction createTransaction(TransactionDTO transaction) throws Exception {
         User sender = this.userService.findUserById(transaction.senderId());
         User receiver = this.userService.findUserById(transaction.receiverId());
 
+     // Apenas usuários COMMON podem realizar transferências
         userService.validateTransaction(sender, transaction.value());
 
-       boolean isAuthorized = this.authorizeTransaction(sender, transaction.value());
+     // Consulta o serviço externo para autorização da transação
+        boolean isAuthorized = this.authorizeTransaction(sender, transaction.value());
         if(!isAuthorized){
             throw new TransactionNotAllowedException ("Transação não autorizada");
         }
@@ -48,6 +49,7 @@ public class TransactionService {
         newTransaction.setReceiver(receiver);
         newTransaction.setTimestamp(LocalDateTime.now());
 
+     // Atualiza os saldos após a autorização da transação
         sender.setBalance(sender.getBalance().subtract(transaction.value()));
         receiver.setBalance(receiver.getBalance().add(transaction.value()));
 
@@ -61,27 +63,6 @@ public class TransactionService {
         return newTransaction;
     }
 
-
-//    public boolean authorizeTransaction (User sender, BigDecimal value){
-//        ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
-//
-//        if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
-//            String message = (String) authorizationResponse.getBody().get("message");
-//            return "Autorizado".equalsIgnoreCase(message);
-//        } else return false;
-//    }
-
-//    public boolean authorizeTransaction (User sender, BigDecimal value){
-//     try {ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
-//     System.out.println(authorizationResponse.getBody());
-//         if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
-//            String message = (String) authorizationResponse.getBody().get("message");
-//            return "Autorizado".equalsIgnoreCase(message);
-//            }
-//        } catch (HttpClientErrorException e) {
-//         return false;
-//        }   return false;
-//    }
     
     public boolean authorizeTransaction(User sender, BigDecimal value) {
      try {ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
@@ -89,7 +70,8 @@ public class TransactionService {
                 Map<String, Object> body = authorizationResponse.getBody();
                 Map<String, Object> data = (Map<String, Object>) body.get("data");
                 return (Boolean) data.get("authorization");
-            }
+            }	
+    			// Trata respostas 403 da API externa como transações não autorizadas
         		} catch (HttpClientErrorException e) {
             return false;
         }  return false;

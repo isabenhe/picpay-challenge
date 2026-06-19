@@ -4,6 +4,7 @@ package com.picpaysimplificado.services;
 import com.picpaysimplificado.domain.user.User;
 import com.picpaysimplificado.domain.user.UserType;
 import com.picpaysimplificado.dtos.UserDTO;
+import com.picpaysimplificado.exception.TransactionNotAllowedException;
 import com.picpaysimplificado.exception.UserNotFoundException;
 import com.picpaysimplificado.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +20,11 @@ public class UserService {
 
     public void validateTransaction(User sender, BigDecimal amount) throws Exception {
         if (sender.getUserType() == UserType.MERCHANT) {
-            throw new Exception("Usuário do tipo Lojista nao está autorizado a realizar transação");
+            throw new TransactionNotAllowedException ("Usuário do tipo Lojista nao está autorizado a realizar transação");
         }
 
         if (sender.getBalance().compareTo(amount) < 0) {
-            throw new Exception("Saldo insuficiente");
+            throw new TransactionNotAllowedException ("Saldo insuficiente");
 
         }
     }
