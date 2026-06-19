@@ -71,14 +71,27 @@ public class TransactionService {
 //        } else return false;
 //    }
 
-    public boolean authorizeTransaction (User sender, BigDecimal value){
+//    public boolean authorizeTransaction (User sender, BigDecimal value){
+//     try {ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
+//     System.out.println(authorizationResponse.getBody());
+//         if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
+//            String message = (String) authorizationResponse.getBody().get("message");
+//            return "Autorizado".equalsIgnoreCase(message);
+//            }
+//        } catch (HttpClientErrorException e) {
+//         return false;
+//        }   return false;
+//    }
+    
+    public boolean authorizeTransaction(User sender, BigDecimal value) {
      try {ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
-         if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
-            String message = (String) authorizationResponse.getBody().get("message");
-            return "Autorizado".equalsIgnoreCase(message);
+    	if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
+                Map<String, Object> body = authorizationResponse.getBody();
+                Map<String, Object> data = (Map<String, Object>) body.get("data");
+                return (Boolean) data.get("authorization");
             }
-        } catch (HttpClientErrorException e) {
-         return false;
-        }   return false;
+        		} catch (HttpClientErrorException e) {
+            return false;
+        }  return false;
     }
 }
