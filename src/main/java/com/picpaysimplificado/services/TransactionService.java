@@ -6,15 +6,10 @@ import com.picpaysimplificado.dtos.TransactionDTO;
 import com.picpaysimplificado.exception.TransactionNotAllowedException;
 import com.picpaysimplificado.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
+
 
 @Service
 public class TransactionService {
@@ -24,8 +19,8 @@ public class TransactionService {
     @Autowired
     private TransactionRepository repository;
 
-    @Autowired // Cliente HTTP responsável pela comunicação com APIs externas
-    private RestTemplate restTemplate;
+    @Autowired
+    private AuthorizationService authService;
 
     @Autowired
     private NotificationService notificationService;
@@ -38,7 +33,7 @@ public class TransactionService {
         userService.validateTransaction(sender, transaction.value());
 
      // Consulta o serviço externo para autorização da transação
-        boolean isAuthorized = this.authorizeTransaction(sender, transaction.value());
+        boolean isAuthorized = this.authService.authorizeTransaction(sender, transaction.value());
         if(!isAuthorized){
             throw new TransactionNotAllowedException ("Transação não autorizada");
         }
@@ -61,19 +56,5 @@ public class TransactionService {
         this.notificationService.sendNotification(receiver, "transação recebida com sucesso");
 
         return newTransaction;
-    }
-
-    
-    public boolean authorizeTransaction(User sender, BigDecimal value) {
-     try {ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize", Map.class);
-    	if (authorizationResponse.getStatusCode() == HttpStatus.OK) {
-                Map<String, Object> body = authorizationResponse.getBody();
-                Map<String, Object> data = (Map<String, Object>) body.get("data");
-                return (Boolean) data.get("authorization");
-            }	
-    			// Trata respostas 403 da API externa como transações não autorizadas
-        		} catch (HttpClientErrorException e) {
-            return false;
-        }  return false;
     }
 }
